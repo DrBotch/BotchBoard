@@ -10,6 +10,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    env:
+      PORT: 8765
+    
     steps:
     - uses: actions/checkout@v4
     
@@ -43,17 +46,20 @@ jobs:
     - name: Start server and wait for it
       run: |
         nohup node server.js > server.log 2>&1 &
-        echo "Waiting for server..."
+        echo "Waiting for server on port $PORT..."
         for i in {1..30}; do
-          if curl -s http://127.0.0.1:8765/api/meta.json > /dev/null 2>&1; then
+          if curl -s http://127.0.0.1:$PORT/api/meta.json > /dev/null 2>&1; then
             echo "Server is ready!"
             break
           fi
+          echo "Attempt $i..."
           sleep 1
         done
+        echo "--- Server log ---"
         cat server.log || true
+        echo "--- End log ---"
     
     - name: Run tests
-      run: CI=true node test-suite.js
+      run: node test-suite.js
       env:
         SKIP_BROWSER_TESTS: 'true'
