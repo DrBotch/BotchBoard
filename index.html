@@ -153,6 +153,12 @@
       border-radius: 12px;
       padding: 20px;
       text-align: center;
+      transition: all 0.2s;
+    }
+    .stat-card:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
     }
     .stat-value { 
       font-size: 2.2em; 
@@ -471,19 +477,19 @@
         </div>
         
         <div class="stat-cards">
-          <div class="stat-card">
+          <div class="stat-card" onclick="navigateTo('sessions')" style="cursor: pointer;">
             <div class="stat-value blue" id="stat-sessions">-</div>
             <div class="stat-label">Sessions</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" onclick="navigateTo('cron')" style="cursor: pointer;">
             <div class="stat-value" id="stat-cron">-</div>
             <div class="stat-label">Cron Jobs</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" onclick="navigateTo('memory')" style="cursor: pointer;">
             <div class="stat-value yellow" id="stat-memory">-</div>
             <div class="stat-label">Memory Files</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" onclick="navigateTo('skills')" style="cursor: pointer;">
             <div class="stat-value purple" id="stat-skills">-</div>
             <div class="stat-label">Skills</div>
           </div>
@@ -865,6 +871,13 @@
     
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('open');
+    }
+    
+    function navigateTo(page) {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelector('.nav-item[data-page="' + page + '"]').classList.add('active');
+      document.getElementById('page-' + page).classList.add('active');
     }
     
     // Fetch JSON data
