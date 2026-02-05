@@ -258,20 +258,38 @@ const apiHandlers = {
   },
   
   'sessions-index.json': async () => {
-    const result = await gatewayRequest('sessions.list', { 
-      limit: 100,
-      includeGlobal: true,
-      includeUnknown: true
-    });
-    const sessions = result?.sessions || [];
-    return sessions.map(s => ({
-      id: s.key,
-      key: s.key,
-      label: s.label || s.key,
-      kind: s.kind || 'unknown',
-      lastActiveAt: s.lastActiveAtMs ? new Date(s.lastActiveAtMs).toISOString() : null,
-      messageCount: s.messageCount || 0
-    }));
+    // Try live gateway first
+    try {
+      const result = await gatewayRequest('sessions.list', { 
+        limit: 100,
+        includeGlobal: true,
+        includeUnknown: true
+      });
+      const sessions = result?.sessions || [];
+      const liveSessions = sessions.map(s => ({
+        id: s.key,
+        key: s.key,
+        label: s.label || s.key,
+        kind: s.kind || 'unknown',
+        lastActiveAt: s.lastActiveAtMs ? new Date(s.lastActiveAtMs).toISOString() : null,
+        messageCount: s.messageCount || 0
+      }));
+      
+      // If gateway returned sessions with messages, use them
+      const hasMessages = liveSessions.some(s => s.messageCount > 0);
+      if (hasMessages) return liveSessions;
+    } catch (e) {
+      console.log('[api] Gateway sessions unavailable, using static data');
+    }
+    
+    // Fall back to static pre-generated index
+    const staticFile = path.join(__dirname, 'api', 'sessions-index.json');
+    try {
+      const content = fs.readFileSync(staticFile, 'utf8');
+      return JSON.parse(content);
+    } catch (e) {
+      return [];
+    }
   },
   
   'skills.json': async () => {
@@ -288,7 +306,7 @@ const apiHandlers = {
   
   'usage.json': async () => {
     // Read from pre-generated usage file (updated by extract-usage.py)
-    const usageFile = '/home/moltbot/clawd/dashboards/api/usage.json';
+    const usageFile = path.join(__dirname, 'api', 'usage.json');
     try {
       const content = fs.readFileSync(usageFile, 'utf8');
       return JSON.parse(content);
@@ -375,18 +393,30 @@ const apiHandlers = {
 
 // Session-specific handler
 async function getSession(sessionId) {
+  // Try live gateway first
   try {
     const history = await gatewayRequest('chat.history', { 
       sessionKey: sessionId,
       limit: 200 
     });
-    return {
-      id: sessionId,
-      key: sessionId,
-      messages: history?.messages || []
-    };
+    if (history?.messages && history.messages.length > 0) {
+      return {
+        id: sessionId,
+        key: sessionId,
+        messages: history.messages
+      };
+    }
   } catch (e) {
-    return { id: sessionId, error: e.message, messages: [] };
+    console.log(`[api] Gateway session ${sessionId} unavailable:`, e.message);
+  }
+  
+  // Fall back to static pre-generated session file
+  const staticFile = path.join(__dirname, 'api', `session-${sessionId}.json`);
+  try {
+    const content = fs.readFileSync(staticFile, 'utf8');
+    return JSON.parse(content);
+  } catch (e) {
+    return { id: sessionId, messages: [] };
   }
 }
 
