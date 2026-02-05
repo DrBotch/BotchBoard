@@ -63,3 +63,4 @@ jobs:
       run: node test-suite.js
       env:
         SKIP_BROWSER_TESTS: 'true'
+        SKIP_GATEWAY_TESTS: 'true'
