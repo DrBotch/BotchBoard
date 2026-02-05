@@ -1,0 +1,49 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Check JavaScript syntax
+      run: node --check server.js test-suite.js
+    
+    - name: Create mock API data
+      run: |
+        mkdir -p api
+        echo '{"generatedAt":"2024-01-01T00:00:00Z","live":true,"gateway":{"connected":true}}' > api/meta.json
+        echo '{"uptime":"1d 2h","host":"test","os":"Linux"}' > api/system.json
+        echo '[{"name":"test-job","schedule":"0 * * * *","status":"ok"}]' > api/cron.json
+        echo '[]' > api/sessions.json
+        echo '[]' > api/sessions-index.json
+        echo '[{"name":"test-skill","description":"Test"}]' > api/skills.json
+        echo '{"totals":{"totalCost":0,"inputTokens":0,"outputTokens":0,"cacheReadTokens":0,"cacheWriteTokens":0},"byModel":[],"byDay":[]}' > api/usage.json
+        echo '"# Test Memory"' > api/memory-main.json
+        echo '[]' > api/memory-files.json
+        echo '{}' > api/config-files.json
+        echo '[]' > api/chat-history.json
+    
+    - name: Start server
+      run: |
+        node server.js &
+        sleep 3
+    
+    - name: Run tests
+      run: node test-suite.js
