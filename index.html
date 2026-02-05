@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Botch Dashboard</title>
+  <!-- Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0f0f1a;
+      --bg-secondary: #1a1a2e;
+      --bg-card: rgba(255,255,255,0.03);
+      --bg-hover: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.1);
+      --text-primary: #eee;
+      --text-secondary: #888;
+      --accent-green: #4ade80;
+      --accent-blue: #60a5fa;
+      --accent-yellow: #fbbf24;
+      --accent-red: #f87171;
+      --accent-purple: #a78bfa;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    
+    /* Layout */
+    .app { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 220px;
+      background: var(--bg-primary);
+      border-right: 1px solid var(--border);
+      padding: 20px 0;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 10;
+    }
+    .main {
+      flex: 1;
+      margin-left: 220px;
+      padding: 20px 30px;
+      min-height: 100vh;
+    }
+    
+    /* Sidebar */
+    .logo {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .logo h1 { 
+      font-size: 1.4em; 
+      display: flex; 
+      align-items: center; 
+      gap: 10px;
+    }
+    .logo .status { 
+      width: 10px; height: 10px; 
+      background: var(--accent-green); 
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--accent-green); }
+      50% { opacity: 0.7; box-shadow: 0 0 5px var(--accent-green); }
+    }
+    
+    .nav-item {
+      padding: 12px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+      font-size: 0.95em;
+    }
+    .nav-item:hover { 
+      background: var(--bg-card); 
+      color: var(--text-primary);
+    }
+    .nav-item.active {
+      background: var(--bg-card);
+      color: var(--accent-blue);
+      border-left-color: var(--accent-blue);
+    }
+    .nav-item .icon { width: 20px; text-align: center; }
+    
+    .sidebar-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 15px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8em;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+    }
+    .sidebar-footer .refresh-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      font-size: 0.8em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .card-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    
+    /* Stats */
+    .stat-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-value { 
+      font-size: 2.2em; 
+      font-weight: bold; 
+      color: var(--accent-green);
+      line-height: 1;
+    }
+    .stat-value.blue { color: var(--accent-blue); }
+    .stat-value.yellow { color: var(--accent-yellow); }
+    .stat-value.purple { color: var(--accent-purple); }
+    .stat-value.red { color: var(--accent-red); }
+    .stat-label { 
+      font-size: 0.8em; 
+      color: var(--text-secondary); 
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Lists */
+    .list-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-item:hover { background: var(--bg-hover); margin: 0 -15px; padding: 12px 15px; border-radius: 8px; }
+    .list-item-content { flex: 1; min-width: 0; }
+    .list-item-title { 
+      font-weight: 500; 
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .list-item-meta { 
+      font-size: 0.85em; 
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .tag.green { background: rgba(74, 222, 128, 0.2); color: var(--accent-green); }
+    .tag.blue { background: rgba(96, 165, 250, 0.2); color: var(--accent-blue); }
+    .tag.yellow { background: rgba(251, 191, 36, 0.2); color: var(--accent-yellow); }
+    .tag.red { background: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
+    .tag.purple { background: rgba(167, 139, 250, 0.2); color: var(--accent-purple); }
+    
+    /* Page sections */
+    .page { display: none; }
+    .page.active { display: block; }
+    .page-header { margin-bottom: 25px; }
+    .page-header h1 { font-size: 1.6em; margin-bottom: 5px; }
+    .page-header p { color: var(--text-secondary); font-size: 0.95em; }
+    
+    /* Memory viewer */
+    .memory-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      .memory-grid { grid-template-columns: 1fr; }
+    }
+    .file-list { max-height: 500px; overflow-y: auto; }
+    .file-item {
+      padding: 12px 15px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .file-item:hover { background: var(--bg-hover); border-color: var(--accent-blue); }
+    .file-item.active { background: rgba(96, 165, 250, 0.1); border-color: var(--accent-blue); }
+    .file-name { font-weight: 500; font-size: 0.95em; }
+    .file-meta { font-size: 0.8em; color: var(--text-secondary); margin-top: 3px; }
+    
+    .file-content {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85em;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    
+    /* Skills grid */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 12px;
+    }
+    .skill-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      transition: all 0.2s;
+    }
+    .skill-card:hover { border-color: var(--accent-purple); transform: translateY(-2px); }
+    .skill-name { font-weight: 600; color: var(--accent-purple); margin-bottom: 5px; }
+    .skill-desc { 
+      font-size: 0.85em; 
+      color: var(--text-secondary);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    /* Progress bar */
+    .progress-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { 
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; padding: 15px; }
+      .stat-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    /* Mobile menu */
+    .mobile-header {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border);
+      padding: 15px 20px;
+      z-index: 9;
+    }
+    @media (max-width: 768px) {
+      .mobile-header { display: flex; align-items: center; justify-content: space-between; }
+      .main { padding-top: 70px; }
+    }
+    .menu-btn {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.5em;
+      cursor: pointer;
+    }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+    .empty-state .icon { font-size: 3em; margin-bottom: 15px; opacity: 0.5; }
+    
+    /* Search input */
+    input::placeholder { color: var(--text-secondary); }
+    input:focus, textarea:focus { outline: none; border-color: var(--accent-blue); }
+    
+    /* Markdown rendered content */
+    .md-content {
+      line-height: 1.7;
+      font-size: 0.9em;
+    }
+    .md-content h1 { font-size: 1.5em; margin: 15px 0 10px; color: var(--accent-blue); }
+    .md-content h2 { font-size: 1.25em; margin: 12px 0 8px; color: var(--accent-purple); }
+    .md-content h3 { font-size: 1.1em; margin: 10px 0 6px; color: var(--accent-green); }
+    .md-content p { margin: 8px 0; }
+    .md-content ul, .md-content ol { margin: 8px 0 8px 20px; }
+    .md-content li { margin: 4px 0; }
+    .md-content code { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', monospace; font-size: 0.9em; }
+    .md-content pre { background: var(--bg-primary); padding: 15px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
+    .md-content pre code { background: none; padding: 0; }
+    .md-content a { color: var(--accent-blue); text-decoration: none; }
+    .md-content a:hover { text-decoration: underline; }
+    .md-content blockquote { border-left: 3px solid var(--accent-purple); padding-left: 15px; margin: 10px 0; color: var(--text-secondary); }
+    .md-content strong { color: var(--accent-yellow); }
+    
+    /* Edit mode */
+    .edit-textarea {
+      width: 100%;
+      min-height: 400px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      color: var(--text-primary);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85em;
+      line-height: 1.6;
+      resize: vertical;
+    }
+    .edit-btn {
+      padding: 6px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.8em;
+      transition: all 0.2s;
+    }
+    .edit-btn:hover { background: var(--bg-hover); border-color: var(--accent-blue); }
+    .edit-btn.save { background: rgba(74, 222, 128, 0.2); border-color: var(--accent-green); }
+    .edit-btn.cancel { background: rgba(248, 113, 113, 0.2); border-color: var(--accent-red); }
+    
+    /* Quick links */
+    .quick-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .quick-link {
+      padding: 8px 15px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 0.9em;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .quick-link:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent-blue);
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile-header">
+    <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    <span style="font-weight: 600;">🤖 Botch</span>
+    <span id="mobileStatus" class="tag green">Online</span>
+  </div>
+
+  <div class="app">
+    <nav class="sidebar" id="sidebar">
+      <div class="logo">
+        <h1><span class="status"></span> Botch</h1>
+      </div>
+      
+      <div class="nav-item active" data-page="overview">
+        <span class="icon">📊</span> Overview
+      </div>
+      <div class="nav-item" data-page="memory">
+        <span class="icon">🧠</span> Memory
+      </div>
+      <div class="nav-item" data-page="sessions">
+        <span class="icon">💬</span> Sessions
+      </div>
+      <div class="nav-item" data-page="logs">
+        <span class="icon">📜</span> Chat Logs
+      </div>
+      <div class="nav-item" data-page="cron">
+        <span class="icon">⏰</span> Cron Jobs
+      </div>
+      <div class="nav-item" data-page="skills">
+        <span class="icon">🛠️</span> Skills
+      </div>
+      <div class="nav-item" data-page="usage">
+        <span class="icon">💰</span> Usage
+      </div>
+      <div class="nav-item" data-page="config">
+        <span class="icon">📝</span> Config
+      </div>
+      <div class="nav-item" data-page="system">
+        <span class="icon">💻</span> System
+      </div>
+      
+      <div class="sidebar-footer">
+        <div id="lastUpdate">Loading...</div>
+        <div class="refresh-info" style="margin-top: 8px;">
+          <span>Auto-refresh</span>
+          <span id="refreshCountdown">30s</span>
+        </div>
+      </div>
+    </nav>
+    
+    <main class="main">
+      <!-- Overview Page -->
+      <div class="page active" id="page-overview">
+        <div class="page-header">
+          <h1>👋 Dashboard</h1>
+          <p>Agent status and activity at a glance • <span id="current-time"></span></p>
+        </div>
+        
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-value blue" id="stat-sessions">-</div>
+            <div class="stat-label">Sessions</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-cron">-</div>
+            <div class="stat-label">Cron Jobs</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value yellow" id="stat-memory">-</div>
+            <div class="stat-label">Memory Files</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value purple" id="stat-skills">-</div>
+            <div class="stat-label">Skills</div>
+          </div>
+        </div>
+        
+        <div class="card-grid">
+          <div class="card">
+            <h2>⚠️ Alerts & Status</h2>
+            <div id="alerts-section">
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">OpenAI Quota</div>
+                  <div class="list-item-meta">Email digest failed - needs credits</div>
+                </div>
+                <span class="tag red">error</span>
+              </div>
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">Dashboard</div>
+                  <div class="list-item-meta">Running on localhost:8765</div>
+                </div>
+                <span class="tag green">ok</span>
+              </div>
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">Session</div>
+                  <div class="list-item-meta">claude-opus-4-5 via Telegram</div>
+                </div>
+                <span class="tag blue">active</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <h2>⏰ Scheduled Jobs</h2>
+            <div id="cron-overview">Loading...</div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2>📊 Current Session</h2>
+          <div class="list-item">
+            <div class="list-item-content">
+              <div class="list-item-title">Main Session with Stefan</div>
+              <div class="list-item-meta">Model: claude-opus-4-5 • Channel: Telegram</div>
+            </div>
+            <span class="tag blue">active</span>
+          </div>
+          <div style="margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: var(--text-secondary); margin-bottom: 5px;">
+              <span>Context usage</span>
+              <span id="context-usage">~21k / 200k tokens</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="context-bar" style="width: 10%"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2>⚡ Quick Info</h2>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+            <div style="padding: 12px; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border);">
+              <div style="font-size: 0.75em; color: var(--text-secondary); margin-bottom: 5px;">MODEL</div>
+              <div style="font-weight: 600; color: var(--accent-purple);">Claude Opus 4.5</div>
+            </div>
+            <div style="padding: 12px; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border);">
+              <div style="font-size: 0.75em; color: var(--text-secondary); margin-bottom: 5px;">CHANNEL</div>
+              <div style="font-weight: 600; color: var(--accent-blue);">Telegram</div>
+            </div>
+            <div style="padding: 12px; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border);">
+              <div style="font-size: 0.75em; color: var(--text-secondary); margin-bottom: 5px;">THINKING</div>
+              <div style="font-weight: 600; color: var(--accent-yellow);">Low</div>
+            </div>
+            <div style="padding: 12px; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border);">
+              <div style="font-size: 0.75em; color: var(--text-secondary); margin-bottom: 5px;">HOST</div>
+              <div style="font-weight: 600; color: var(--accent-green);">moltbot</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Memory Page -->
+      <div class="page" id="page-memory">
+        <div class="page-header">
+          <h1>🧠 Memory</h1>
+          <p>Browse memory files and long-term storage</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <input type="text" id="memory-search" placeholder="🔍 Search memory files..." 
+            style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-size: 0.95em;"
+            oninput="searchMemory(this.value)">
+        </div>
+        
+        <div class="memory-grid">
+          <div class="card">
+            <h2>📁 Memory Files</h2>
+            <div class="file-list" id="memory-files">Loading...</div>
+          </div>
+          
+          <div class="card">
+            <h2 style="display: flex; justify-content: space-between; align-items: center;">
+              <span>📄 <span id="current-file">Select a file</span></span>
+              <div id="memory-file-buttons" style="display: none;">
+                <button class="edit-btn" id="memory-edit-btn" onclick="toggleMemoryEdit()">✏️ Edit</button>
+                <button class="edit-btn save" id="memory-save-btn" style="display: none;" onclick="saveMemoryFile()">💾 Save</button>
+                <button class="edit-btn cancel" id="memory-cancel-btn" style="display: none;" onclick="cancelMemoryEdit()">✗ Cancel</button>
+              </div>
+            </h2>
+            <div id="file-view" class="md-content" style="max-height: 500px; overflow-y: auto; padding: 15px; background: var(--bg-primary); border-radius: 8px;">← Select a file from the list to view its contents</div>
+            <textarea id="file-edit" class="edit-textarea" style="display: none;"></textarea>
+          </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+          <h2 style="display: flex; justify-content: space-between; align-items: center;">
+            <span>💾 MEMORY.md (Long-term Memory)</span>
+            <div>
+              <button class="edit-btn" id="mainmem-edit-btn" onclick="toggleMainMemEdit()">✏️ Edit</button>
+              <button class="edit-btn save" id="mainmem-save-btn" style="display: none;" onclick="saveMainMem()">💾 Save</button>
+              <button class="edit-btn cancel" id="mainmem-cancel-btn" style="display: none;" onclick="cancelMainMemEdit()">✗ Cancel</button>
+            </div>
+          </h2>
+          <div id="memory-main-view" class="md-content" style="max-height: 400px; overflow-y: auto; padding: 15px; background: var(--bg-primary); border-radius: 8px;">Loading...</div>
+          <textarea id="memory-main-edit" class="edit-textarea" style="display: none;"></textarea>
+        </div>
+      </div>
+      
+      <!-- Sessions Page -->
+      <div class="page" id="page-sessions">
+        <div class="page-header">
+          <h1>💬 Sessions & Chat History</h1>
+          <p>Active sessions and recent conversations</p>
+        </div>
+        
+        <div class="card">
+          <h2>Active Sessions</h2>
+          <div id="sessions-list">Loading...</div>
+        </div>
+        
+        <div class="card">
+          <h2>📜 Recent Chat History</h2>
+          <div id="chat-history" style="max-height: 500px; overflow-y: auto;">Loading...</div>
+        </div>
+      </div>
+      
+      <!-- Chat Logs Page -->
+      <div class="page" id="page-logs">
+        <div class="page-header">
+          <h1>📜 Chat Logs</h1>
+          <p>Browse full conversation transcripts</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <input type="text" id="logs-search" placeholder="🔍 Search conversations..." 
+            style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-size: 0.95em;"
+            oninput="searchLogs(this.value)">
+        </div>
+        
+        <div class="memory-grid">
+          <div class="card">
+            <h2>📁 Sessions (<span id="logs-count">0</span>)</h2>
+            <div class="file-list" id="logs-list" style="max-height: 600px;">Loading...</div>
+          </div>
+          
+          <div class="card" style="grid-column: span 1;">
+            <h2>💬 <span id="current-log">Select a session</span></h2>
+            <div id="log-content" style="max-height: 600px; overflow-y: auto;">
+              ← Select a session from the list to view the conversation
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Cron Page -->
+      <div class="page" id="page-cron">
+        <div class="page-header">
+          <h1>⏰ Scheduled Jobs</h1>
+          <p>Automated tasks and recurring reminders</p>
+        </div>
+        
+        <div class="card">
+          <h2>All Jobs (<span id="cron-count">0</span>)</h2>
+          <div id="cron-jobs">Loading...</div>
+        </div>
+      </div>
+      
+      <!-- Skills Page -->
+      <div class="page" id="page-skills">
+        <div class="page-header">
+          <h1>🛠️ Skills</h1>
+          <p>Available agent capabilities and tools</p>
+        </div>
+        
+        <div class="card">
+          <h2>Installed Skills (<span id="skills-count">0</span>)</h2>
+          <div class="skills-grid" id="skills-list">Loading...</div>
+        </div>
+      </div>
+      
+      <!-- Usage Page -->
+      <div class="page" id="page-usage">
+        <div class="page-header">
+          <h1>💰 Usage & Costs</h1>
+          <p>Token usage and cost tracking</p>
+        </div>
+        
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-value" id="usage-cost">-</div>
+            <div class="stat-label">Total Cost</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value blue" id="usage-input">-</div>
+            <div class="stat-label">Input Tokens</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value purple" id="usage-output">-</div>
+            <div class="stat-label">Output Tokens</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value yellow" id="usage-cache">-</div>
+            <div class="stat-label">Cache Tokens</div>
+          </div>
+        </div>
+        
+        <div class="card-grid">
+          <div class="card">
+            <h2>📊 By Model</h2>
+            <div id="usage-by-model">Loading...</div>
+          </div>
+          
+          <div class="card">
+            <h2>📅 Last 14 Days</h2>
+            <div id="usage-by-day">Loading...</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Config Page (Core MD Files) -->
+      <div class="page" id="page-config">
+        <div class="page-header">
+          <h1>📝 Configuration</h1>
+          <p>Core agent files and settings</p>
+        </div>
+        
+        <div class="memory-grid">
+          <div class="card">
+            <h2>📁 Core Files</h2>
+            <div class="file-list" id="config-files">
+              <div class="file-item" onclick="loadConfigFile('AGENTS.md')">
+                <div class="file-name">📋 AGENTS.md</div>
+                <div class="file-meta">Workspace instructions</div>
+              </div>
+              <div class="file-item" onclick="loadConfigFile('SOUL.md')">
+                <div class="file-name">💫 SOUL.md</div>
+                <div class="file-meta">Personality & identity</div>
+              </div>
+              <div class="file-item" onclick="loadConfigFile('USER.md')">
+                <div class="file-name">👤 USER.md</div>
+                <div class="file-meta">About you (Stefan)</div>
+              </div>
+              <div class="file-item" onclick="loadConfigFile('IDENTITY.md')">
+                <div class="file-name">🤖 IDENTITY.md</div>
+                <div class="file-meta">Bot identity</div>
+              </div>
+              <div class="file-item" onclick="loadConfigFile('TOOLS.md')">
+                <div class="file-name">🔧 TOOLS.md</div>
+                <div class="file-meta">Local tool notes</div>
+              </div>
+              <div class="file-item" onclick="loadConfigFile('HEARTBEAT.md')">
+                <div class="file-name">💓 HEARTBEAT.md</div>
+                <div class="file-meta">Periodic tasks</div>
+              </div>
+              <div class="file-item" onclick="loadConfigFile('MEMORY.md')">
+                <div class="file-name">🧠 MEMORY.md</div>
+                <div class="file-meta">Long-term memory</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <h2 style="display: flex; justify-content: space-between; align-items: center;">
+              <span>📄 <span id="current-config">Select a file</span></span>
+              <div id="config-buttons" style="display: none;">
+                <button class="edit-btn" id="config-edit-btn" onclick="toggleConfigEdit()">✏️ Edit</button>
+                <button class="edit-btn save" id="config-save-btn" style="display: none;" onclick="saveConfigFile()">💾 Save</button>
+                <button class="edit-btn cancel" id="config-cancel-btn" style="display: none;" onclick="cancelConfigEdit()">✗ Cancel</button>
+              </div>
+            </h2>
+            <div id="config-view" class="md-content" style="max-height: 600px; overflow-y: auto; padding: 15px; background: var(--bg-primary); border-radius: 8px;">
+              ← Select a file to view its contents
+            </div>
+            <textarea id="config-edit" class="edit-textarea" style="display: none;"></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <!-- System Page -->
+      <div class="page" id="page-system">
+        <div class="page-header">
+          <h1>💻 System</h1>
+          <p>Server and resource information</p>
+        </div>
+        
+        <div class="card-grid">
+          <div class="card">
+            <h2>ℹ️ System Info</h2>
+            <div id="system-info">
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">Host</div>
+                  <div class="list-item-meta">moltbot</div>
+                </div>
+              </div>
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">OS</div>
+                  <div class="list-item-meta">Linux (x64)</div>
+                </div>
+              </div>
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">Model</div>
+                  <div class="list-item-meta">claude-opus-4-5</div>
+                </div>
+              </div>
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">Channel</div>
+                  <div class="list-item-meta">Telegram</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <h2>📦 Resources</h2>
+            <div id="resources-info">Loading...</div>
+          </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+          <h2>🔗 Quick Links</h2>
+          <div class="quick-links">
+            <a class="quick-link" href="https://docs.openclaw.ai" target="_blank">📚 OpenClaw Docs</a>
+            <a class="quick-link" href="https://discord.com/invite/clawd" target="_blank">💬 Discord</a>
+            <a class="quick-link" href="https://github.com/openclaw/openclaw" target="_blank">🐙 GitHub</a>
+            <a class="quick-link" href="https://clawhub.com" target="_blank">🛠️ ClawHub Skills</a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // State
+    let memoryFiles = [];
+    let skills = [];
+    let cronJobs = [];
+    let sessions = [];
+    let chatHistory = [];
+    let sessionLogs = [];
+    let refreshInterval = 30;
+    let countdown = refreshInterval;
+    
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        item.classList.add('active');
+        document.getElementById('page-' + item.dataset.page).classList.add('active');
+        // Close mobile menu
+        document.getElementById('sidebar').classList.remove('open');
+      });
+    });
+    
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+    }
+    
+    // Fetch JSON data
+    async function fetchJSON(url) {
+      try {
+        const res = await fetch(url + '?t=' + Date.now());
+        if (!res.ok) throw new Error('Not found');
+        return await res.json();
+      } catch (e) {
+        console.error('Fetch error:', url, e);
+        return null;
+      }
+    }
+    
+    // Load all data
+    async function loadDashboard() {
+      // Memory files
+      const memFiles = await fetchJSON('api/memory-files.json');
+      if (memFiles) {
+        memoryFiles = memFiles;
+        document.getElementById('stat-memory').textContent = memFiles.length;
+        renderMemoryFiles();
+      }
+      
+      // Main memory
+      const memMain = await fetchJSON('api/memory-main.json');
+      if (memMain) {
+        mainMemContent = memMain;
+        document.getElementById('memory-main-view').innerHTML = marked.parse(memMain);
+      }
+      
+      // Skills
+      const skillsData = await fetchJSON('api/skills.json');
+      if (skillsData) {
+        skills = skillsData;
+        document.getElementById('stat-skills').textContent = skills.length;
+        document.getElementById('skills-count').textContent = skills.length;
+        renderSkills();
+      }
+      
+      // Cron jobs
+      const cronData = await fetchJSON('api/cron.json');
+      if (cronData) {
+        cronJobs = cronData;
+        document.getElementById('stat-cron').textContent = cronJobs.length;
+        document.getElementById('cron-count').textContent = cronJobs.length;
+        renderCronJobs();
+        renderCronOverview();
+      }
+      
+      // Sessions
+      const sessionsData = await fetchJSON('api/sessions.json');
+      if (sessionsData) {
+        sessions = sessionsData;
+        document.getElementById('stat-sessions').textContent = sessions.length;
+        renderSessions();
+      }
+      
+      // Chat history
+      const chatData = await fetchJSON('api/chat-history.json');
+      if (chatData) {
+        chatHistory = chatData;
+        renderChatHistory();
+      }
+      
+      // Session logs index
+      const logsData = await fetchJSON('api/sessions-index.json');
+      if (logsData) {
+        sessionLogs = logsData;
+        document.getElementById('logs-count').textContent = logsData.length;
+        renderLogsList();
+      }
+      
+      // Usage data
+      const usageData = await fetchJSON('api/usage.json');
+      if (usageData) {
+        renderUsage(usageData);
+      }
+      
+      // Config files
+      const configData = await fetchJSON('api/config-files.json');
+      if (configData) {
+        window.configFiles = configData;
+      }
+      
+      // System info
+      const systemData = await fetchJSON('api/system.json');
+      if (systemData) {
+        renderSystemInfo(systemData);
+      }
+      
+      // Update timestamp
+      const meta = await fetchJSON('api/meta.json');
+      if (meta) {
+        const d = new Date(meta.generated);
+        document.getElementById('lastUpdate').textContent = 'Updated: ' + d.toLocaleTimeString();
+      }
+      
+      countdown = refreshInterval;
+    }
+    
+    function renderMemoryFiles() {
+      const container = document.getElementById('memory-files');
+      if (memoryFiles.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📁</div>No memory files yet</div>';
+        return;
+      }
+      container.innerHTML = memoryFiles.map((f, i) => `
+        <div class="file-item" onclick="showFile(${i})">
+          <div class="file-name">${f.name}</div>
+          <div class="file-meta">${formatBytes(f.size)} • ${formatDate(f.modified * 1000)}</div>
+        </div>
+      `).join('');
+    }
+    
+    function renderSkills() {
+      const container = document.getElementById('skills-list');
+      if (skills.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🛠️</div>No skills installed</div>';
+        return;
+      }
+      container.innerHTML = skills.map(s => {
+        const status = s.status || 'unknown';
+        const statusColor = status === 'active' ? 'var(--accent-green)' : status === 'inactive' ? 'var(--accent-red)' : 'var(--text-secondary)';
+        const statusIcon = status === 'active' ? '✓' : status === 'inactive' ? '✗' : '?';
+        return `
+          <div class="skill-card" style="border-left: 3px solid ${statusColor};">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="skill-name">${s.name}</div>
+              <span style="font-size: 0.75em; color: ${statusColor};">${statusIcon} ${status}</span>
+            </div>
+            <div class="skill-desc">${s.description || s.title || 'No description'}</div>
+            ${s.missing ? `<div style="font-size: 0.75em; color: var(--accent-red); margin-top: 5px;">Missing: ${s.missing.join(', ')}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function renderCronJobs() {
+      const container = document.getElementById('cron-jobs');
+      if (cronJobs.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">⏰</div>No scheduled jobs</div>';
+        return;
+      }
+      container.innerHTML = cronJobs.map(job => `
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">
+              ${job.icon || '📋'} ${job.name}
+            </div>
+            <div class="list-item-meta">${job.scheduleHuman || job.schedule}${job.error ? ' • ' + job.error : ''}</div>
+          </div>
+          <span class="tag ${getStatusClass(job.status)}">${job.status}</span>
+        </div>
+      `).join('');
+    }
+    
+    function renderCronOverview() {
+      const container = document.getElementById('cron-overview');
+      const topJobs = cronJobs.slice(0, 4);
+      if (topJobs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No scheduled jobs</div>';
+        return;
+      }
+      container.innerHTML = topJobs.map(job => `
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">${job.icon || '📋'} ${job.name}</div>
+            <div class="list-item-meta">${job.scheduleHuman || job.schedule}</div>
+          </div>
+          <span class="tag ${getStatusClass(job.status)}">${job.status}</span>
+        </div>
+      `).join('');
+    }
+    
+    function renderSessions() {
+      const container = document.getElementById('sessions-list');
+      if (sessions.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">💬</div>No sessions</div>';
+        return;
+      }
+      container.innerHTML = sessions.map(s => `
+        <div class="list-item">
+          <div class="list-item-content">
+            <div class="list-item-title">${s.displayName}</div>
+            <div class="list-item-meta">${s.model} • ${s.channel}${s.totalTokens ? ' • ' + formatNumber(s.totalTokens) + ' tokens' : ''}</div>
+          </div>
+          <span class="tag ${s.active ? 'blue' : s.status === 'error' ? 'red' : s.status === 'aborted' ? 'yellow' : 'green'}">${s.active ? 'active' : s.status || 'ok'}</span>
+        </div>
+      `).join('');
+    }
+    
+    function renderChatHistory() {
+      const container = document.getElementById('chat-history');
+      if (!chatHistory || chatHistory.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">💬</div>No chat history</div>';
+        return;
+      }
+      
+      // Get messages from the first (most recent) session
+      const mainSession = chatHistory[0];
+      if (!mainSession || !mainSession.messages) {
+        container.innerHTML = '<div class="empty-state">No messages found</div>';
+        return;
+      }
+      
+      // Filter out tool results and NO_REPLY
+      const messages = mainSession.messages.filter(m => 
+        m.role !== 'toolResult' && 
+        m.text !== 'NO_REPLY' &&
+        !m.text.startsWith('{') &&
+        m.text.trim().length > 0
+      ).slice(-20); // Last 20 meaningful messages
+      
+      container.innerHTML = messages.map(m => `
+        <div style="margin-bottom: 12px; padding: 12px; background: ${m.role === 'user' ? 'rgba(96, 165, 250, 0.1)' : 'var(--bg-card)'}; border-radius: 8px; border-left: 3px solid ${m.role === 'user' ? 'var(--accent-blue)' : 'var(--accent-green)'};">
+          <div style="font-size: 0.75em; color: var(--text-secondary); margin-bottom: 5px;">
+            ${m.role === 'user' ? '👤 Stefan' : '🤖 Botch'} • ${formatTimestamp(m.timestamp)}
+          </div>
+          <div style="font-size: 0.9em; white-space: pre-wrap; word-break: break-word;">${escapeHtml(m.text)}</div>
+        </div>
+      `).join('');
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function formatTimestamp(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    }
+    
+    function searchMemory(query) {
+      const container = document.getElementById('memory-files');
+      const content = document.getElementById('file-view');
+      
+      if (!query.trim()) {
+        renderMemoryFiles();
+        return;
+      }
+      
+      const q = query.toLowerCase();
+      const results = memoryFiles.filter(f => 
+        f.name.toLowerCase().includes(q) || 
+        (f.preview && f.preview.toLowerCase().includes(q))
+      );
+      
+      if (results.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div>No matches found</div>';
+        content.innerHTML = 'No results for: ' + query;
+        return;
+      }
+      
+      container.innerHTML = results.map((f, i) => {
+        const origIndex = memoryFiles.indexOf(f);
+        return `
+          <div class="file-item" onclick="showFile(${origIndex})">
+            <div class="file-name">${highlightMatch(f.name, q)}</div>
+            <div class="file-meta">${formatBytes(f.size)} • ${formatDate(f.modified * 1000)}</div>
+          </div>
+        `;
+      }).join('');
+      
+      // Show preview of first result
+      if (results.length > 0) {
+        const first = results[0];
+        document.getElementById('current-file').textContent = first.name + ' (search result)';
+        document.getElementById('memory-file-buttons').style.display = 'flex';
+        currentMemoryFile = first.name;
+        currentMemoryContent = first.preview || '';
+        content.innerHTML = marked.parse(currentMemoryContent);
+      }
+    }
+    
+    function highlightMatch(text, query) {
+      const idx = text.toLowerCase().indexOf(query);
+      if (idx < 0) return text;
+      return text.slice(0, idx) + '<mark style="background: var(--accent-yellow); color: var(--bg-primary); padding: 0 2px; border-radius: 2px;">' + text.slice(idx, idx + query.length) + '</mark>' + text.slice(idx + query.length);
+    }
+    
+    function renderLogsList() {
+      const container = document.getElementById('logs-list');
+      if (!sessionLogs || sessionLogs.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📜</div>No logs found</div>';
+        return;
+      }
+      
+      container.innerHTML = sessionLogs.map((s, i) => {
+        const date = s.lastMessage ? new Date(s.lastMessage) : new Date(s.modified * 1000);
+        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        return `
+          <div class="file-item" onclick="loadLog('${s.id}', ${i})">
+            <div class="file-name">${dateStr}</div>
+            <div class="file-meta">${s.messageCount} messages • ${formatBytes(s.size)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function renderUsage(data) {
+      if (!data || !data.totals) return;
+      
+      const t = data.totals;
+      document.getElementById('usage-cost').textContent = '$' + t.totalCost.toFixed(2);
+      document.getElementById('usage-input').textContent = formatNumber(t.inputTokens);
+      document.getElementById('usage-output').textContent = formatNumber(t.outputTokens);
+      document.getElementById('usage-cache').textContent = formatNumber(t.cacheReadTokens + t.cacheWriteTokens);
+      
+      // By model
+      const modelContainer = document.getElementById('usage-by-model');
+      if (data.byModel && data.byModel.length > 0) {
+        modelContainer.innerHTML = data.byModel.slice(0, 8).map(m => `
+          <div class="list-item">
+            <div class="list-item-content">
+              <div class="list-item-title">${m.model}</div>
+              <div class="list-item-meta">${m.calls} calls • ${formatNumber(m.tokens)} tokens</div>
+            </div>
+            <span class="tag green">$${m.cost.toFixed(2)}</span>
+          </div>
+        `).join('');
+      } else {
+        modelContainer.innerHTML = '<div class="empty-state">No data</div>';
+      }
+      
+      // By day
+      const dayContainer = document.getElementById('usage-by-day');
+      if (data.byDay && data.byDay.length > 0) {
+        dayContainer.innerHTML = data.byDay.map(d => `
+          <div class="list-item">
+            <div class="list-item-content">
+              <div class="list-item-title">${d.date}</div>
+              <div class="list-item-meta">${formatNumber(d.tokens)} tokens</div>
+            </div>
+            <span class="tag ${d.cost > 1 ? 'yellow' : 'green'}">$${d.cost.toFixed(2)}</span>
+          </div>
+        `).join('');
+      } else {
+        dayContainer.innerHTML = '<div class="empty-state">No data</div>';
+      }
+    }
+    
+    // Current file being edited
+    let currentConfigFile = null;
+    let currentConfigContent = null;
+    let currentMemoryFile = null;
+    let currentMemoryContent = null;
+    let mainMemContent = null;
+    
+    async function loadConfigFile(filename) {
+      const viewEl = document.getElementById('config-view');
+      const editEl = document.getElementById('config-edit');
+      const titleEl = document.getElementById('current-config');
+      const buttonsEl = document.getElementById('config-buttons');
+      
+      // Mark active
+      document.querySelectorAll('#config-files .file-item').forEach(el => {
+        el.classList.toggle('active', el.textContent.includes(filename));
+      });
+      
+      currentConfigFile = filename;
+      titleEl.textContent = filename;
+      buttonsEl.style.display = 'flex';
+      viewEl.innerHTML = '<div style="color: var(--text-secondary);">Loading...</div>';
+      
+      // Reset edit state
+      cancelConfigEdit();
+      
+      if (window.configFiles && window.configFiles[filename]) {
+        currentConfigContent = window.configFiles[filename];
+        viewEl.innerHTML = marked.parse(currentConfigContent);
+      } else {
+        viewEl.innerHTML = '<div class="empty-state">File not available</div>';
+      }
+    }
+    
+    function toggleConfigEdit() {
+      const viewEl = document.getElementById('config-view');
+      const editEl = document.getElementById('config-edit');
+      const editBtn = document.getElementById('config-edit-btn');
+      const saveBtn = document.getElementById('config-save-btn');
+      const cancelBtn = document.getElementById('config-cancel-btn');
+      
+      viewEl.style.display = 'none';
+      editEl.style.display = 'block';
+      editEl.value = currentConfigContent;
+      editBtn.style.display = 'none';
+      saveBtn.style.display = 'inline-block';
+      cancelBtn.style.display = 'inline-block';
+    }
+    
+    function cancelConfigEdit() {
+      const viewEl = document.getElementById('config-view');
+      const editEl = document.getElementById('config-edit');
+      const editBtn = document.getElementById('config-edit-btn');
+      const saveBtn = document.getElementById('config-save-btn');
+      const cancelBtn = document.getElementById('config-cancel-btn');
+      
+      viewEl.style.display = 'block';
+      editEl.style.display = 'none';
+      editBtn.style.display = 'inline-block';
+      saveBtn.style.display = 'none';
+      cancelBtn.style.display = 'none';
+    }
+    
+    async function saveConfigFile() {
+      const editEl = document.getElementById('config-edit');
+      const newContent = editEl.value;
+      
+      // Save via API (we'll need to create this endpoint)
+      try {
+        const res = await fetch('api/save-file.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({file: currentConfigFile, content: newContent})
+        });
+        if (res.ok) {
+          currentConfigContent = newContent;
+          window.configFiles[currentConfigFile] = newContent;
+          document.getElementById('config-view').innerHTML = marked.parse(newContent);
+          cancelConfigEdit();
+          alert('Saved!');
+        } else {
+          alert('Save failed - API not available. Files can only be edited on the server.');
+        }
+      } catch(e) {
+        // Fallback - just update local view
+        currentConfigContent = newContent;
+        window.configFiles[currentConfigFile] = newContent;
+        document.getElementById('config-view').innerHTML = marked.parse(newContent);
+        cancelConfigEdit();
+        alert('Note: Changes shown locally but not saved to server (need API endpoint).');
+      }
+    }
+    
+    // Memory file editing
+    function showFile(index) {
+      const file = memoryFiles[index];
+      currentMemoryFile = file.name;
+      currentMemoryContent = file.preview || '';
+      
+      document.querySelectorAll('.file-item').forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+      });
+      document.getElementById('current-file').textContent = file.name;
+      document.getElementById('file-view').innerHTML = marked.parse(currentMemoryContent);
+      document.getElementById('memory-file-buttons').style.display = 'flex';
+      cancelMemoryEdit();
+    }
+    
+    function toggleMemoryEdit() {
+      document.getElementById('file-view').style.display = 'none';
+      document.getElementById('file-edit').style.display = 'block';
+      document.getElementById('file-edit').value = currentMemoryContent;
+      document.getElementById('memory-edit-btn').style.display = 'none';
+      document.getElementById('memory-save-btn').style.display = 'inline-block';
+      document.getElementById('memory-cancel-btn').style.display = 'inline-block';
+    }
+    
+    function cancelMemoryEdit() {
+      document.getElementById('file-view').style.display = 'block';
+      document.getElementById('file-edit').style.display = 'none';
+      document.getElementById('memory-edit-btn').style.display = 'inline-block';
+      document.getElementById('memory-save-btn').style.display = 'none';
+      document.getElementById('memory-cancel-btn').style.display = 'none';
+    }
+    
+    async function saveMemoryFile() {
+      const newContent = document.getElementById('file-edit').value;
+      currentMemoryContent = newContent;
+      document.getElementById('file-view').innerHTML = marked.parse(newContent);
+      cancelMemoryEdit();
+      alert('Note: Changes shown locally. Server save requires API endpoint.');
+    }
+    
+    // Main MEMORY.md editing
+    function toggleMainMemEdit() {
+      document.getElementById('memory-main-view').style.display = 'none';
+      document.getElementById('memory-main-edit').style.display = 'block';
+      document.getElementById('memory-main-edit').value = mainMemContent;
+      document.getElementById('mainmem-edit-btn').style.display = 'none';
+      document.getElementById('mainmem-save-btn').style.display = 'inline-block';
+      document.getElementById('mainmem-cancel-btn').style.display = 'inline-block';
+    }
+    
+    function cancelMainMemEdit() {
+      document.getElementById('memory-main-view').style.display = 'block';
+      document.getElementById('memory-main-edit').style.display = 'none';
+      document.getElementById('mainmem-edit-btn').style.display = 'inline-block';
+      document.getElementById('mainmem-save-btn').style.display = 'none';
+      document.getElementById('mainmem-cancel-btn').style.display = 'none';
+    }
+    
+    async function saveMainMem() {
+      const newContent = document.getElementById('memory-main-edit').value;
+      mainMemContent = newContent;
+      document.getElementById('memory-main-view').innerHTML = marked.parse(newContent);
+      cancelMainMemEdit();
+      alert('Note: Changes shown locally. Server save requires API endpoint.');
+    }
+    
+    let currentLogData = null;
+    
+    function searchLogs(query) {
+      if (!currentLogData || !query.trim()) {
+        if (currentLogData) renderLogMessages(currentLogData.messages);
+        return;
+      }
+      
+      const q = query.toLowerCase();
+      const filtered = currentLogData.messages.filter(m => 
+        m.text && m.text.toLowerCase().includes(q)
+      );
+      
+      renderLogMessages(filtered, q);
+    }
+    
+    function renderLogMessages(messages, highlight = null) {
+      const container = document.getElementById('log-content');
+      if (!messages || messages.length === 0) {
+        container.innerHTML = '<div class="empty-state">No messages found</div>';
+        return;
+      }
+      
+      container.innerHTML = messages.map(m => {
+        let text = escapeHtml(m.text);
+        if (highlight) {
+          const re = new RegExp(`(${highlight})`, 'gi');
+          text = text.replace(re, '<mark style="background: var(--accent-yellow); color: var(--bg-primary);">$1</mark>');
+        }
+        return `
+          <div style="margin-bottom: 12px; padding: 12px; background: ${m.role === 'user' ? 'rgba(96, 165, 250, 0.1)' : 'var(--bg-card)'}; border-radius: 8px; border-left: 3px solid ${m.role === 'user' ? 'var(--accent-blue)' : 'var(--accent-green)'};">
+            <div style="font-size: 0.75em; color: var(--text-secondary); margin-bottom: 5px;">
+              ${m.role === 'user' ? '👤 Stefan' : '🤖 Botch'} • ${formatTimestamp(m.timestamp)}
+            </div>
+            <div style="font-size: 0.9em; white-space: pre-wrap; word-break: break-word;">${text}</div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    async function loadLog(sessionId, index) {
+      const container = document.getElementById('log-content');
+      const titleEl = document.getElementById('current-log');
+      
+      // Mark active
+      document.querySelectorAll('#logs-list .file-item').forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+      });
+      
+      container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading...</div>';
+      
+      const data = await fetchJSON(`api/session-${sessionId}.json`);
+      if (!data || !data.messages) {
+        container.innerHTML = '<div class="empty-state">Failed to load session</div>';
+        return;
+      }
+      
+      currentLogData = data;
+      document.getElementById('logs-search').value = '';
+      
+      const date = data.lastMessage ? new Date(data.lastMessage) : new Date(data.modified * 1000);
+      titleEl.textContent = date.toLocaleDateString() + ' (' + data.messageCount + ' messages)';
+      
+      renderLogMessages(data.messages);
+    }
+    
+    function renderSystemInfo(data) {
+      const container = document.getElementById('resources-info');
+      let html = '';
+      
+      if (data.uptime) {
+        html += `<div class="list-item"><div class="list-item-content"><div class="list-item-title">Uptime</div><div class="list-item-meta">${data.uptime}</div></div></div>`;
+      }
+      if (data.disk) {
+        html += `<div class="list-item"><div class="list-item-content"><div class="list-item-title">Disk</div><div class="list-item-meta">${data.disk.used} / ${data.disk.total} (${data.disk.percent})</div></div></div>`;
+      }
+      if (data.memory) {
+        html += `<div class="list-item"><div class="list-item-content"><div class="list-item-title">Memory</div><div class="list-item-meta">${data.memory.used} / ${data.memory.total}</div></div></div>`;
+      }
+      
+      container.innerHTML = html || '<div class="empty-state">No data</div>';
+    }
+    
+    function getStatusClass(status) {
+      switch(status) {
+        case 'ok': return 'green';
+        case 'error': return 'red';
+        case 'pending': return 'yellow';
+        case 'active': return 'blue';
+        default: return 'blue';
+      }
+    }
+    
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    
+    function formatDate(ms) {
+      const d = new Date(ms);
+      const now = new Date();
+      if (d.toDateString() === now.toDateString()) {
+        return 'Today ' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      }
+      return d.toLocaleDateString();
+    }
+    
+    function formatNumber(n) {
+      if (n >= 1000) return (n/1000).toFixed(1) + 'k';
+      return n.toString();
+    }
+    
+    // Countdown timer
+    setInterval(() => {
+      countdown--;
+      document.getElementById('refreshCountdown').textContent = countdown + 's';
+      if (countdown <= 0) {
+        loadDashboard();
+      }
+    }, 1000);
+    
+    // Update current time
+    function updateTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      const el = document.getElementById('current-time');
+      if (el) el.textContent = timeStr;
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+    
+    // Initial load
+    loadDashboard();
+  </script>
+</body>
+</html>

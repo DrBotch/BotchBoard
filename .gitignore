@@ -1,0 +1,3 @@
+node_modules/
+.device-identity.json
+api/*.json

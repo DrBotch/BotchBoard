@@ -1,0 +1,15 @@
+[Unit]
+Description=Botch Dashboard Server (Live Backend)
+After=network.target openclaw-gateway.service
+
+[Service]
+Type=simple
+User=moltbot
+WorkingDirectory=/home/moltbot/clawd/BotchBoard
+Environment=PORT=8765
+ExecStart=/usr/bin/node /home/moltbot/clawd/BotchBoard/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

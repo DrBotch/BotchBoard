@@ -1,0 +1,17 @@
+{
+  "name": "botchboard",
+  "version": "1.0.0",
+  "description": "A web-based dashboard for monitoring and interacting with Botch (OpenClaw agent).",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^24.37.1",
+    "ws": "^8.19.0"
+  }
+}
