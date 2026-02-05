@@ -206,23 +206,27 @@ async function main() {
   console.log('🖥️  UI TESTS');
   console.log('-'.repeat(40));
   
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      executablePath: '/snap/bin/chromium',
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    
-    for (const test of UI_TESTS) {
-      await testUI(browser, test);
+  if (process.env.SKIP_BROWSER_TESTS === 'true') {
+    console.log('  ⏭️  Skipping browser tests (SKIP_BROWSER_TESTS=true)');
+  } else {
+    let browser;
+    try {
+      browser = await puppeteer.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/snap/bin/chromium',
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      
+      for (const test of UI_TESTS) {
+        await testUI(browser, test);
+      }
+    } catch (e) {
+      console.log(`  ❌ Browser launch failed: ${e.message}`);
+      RESULTS.failed++;
+      RESULTS.errors.push({ test: 'Browser', error: e.message });
+    } finally {
+      if (browser) await browser.close();
     }
-  } catch (e) {
-    console.log(`  ❌ Browser launch failed: ${e.message}`);
-    RESULTS.failed++;
-    RESULTS.errors.push({ test: 'Browser', error: e.message });
-  } finally {
-    if (browser) await browser.close();
   }
   
   // Summary
