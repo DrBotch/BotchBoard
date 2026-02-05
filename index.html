@@ -1169,16 +1169,45 @@
         return;
       }
       
-      container.innerHTML = sessionLogs.map((s, i) => {
-        const date = s.lastMessage ? new Date(s.lastMessage) : new Date(s.modified * 1000);
-        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      // Filter out empty sessions
+      const nonEmpty = sessionLogs.filter(s => s.messageCount > 0);
+      if (nonEmpty.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📜</div>No conversations yet</div>';
+        return;
+      }
+      
+      container.innerHTML = nonEmpty.map((s, i) => {
+        // Handle both static file format and live gateway format
+        let dateStr = 'Unknown date';
+        if (s.lastMessage) {
+          const date = new Date(s.lastMessage);
+          dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        } else if (s.lastActiveAt) {
+          const date = new Date(s.lastActiveAt);
+          dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        } else if (s.modified) {
+          const date = new Date(s.modified * 1000);
+          dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        }
+        
+        // Session label - prefer label over raw ID
+        const label = s.label || s.id;
+        const shortLabel = label.length > 30 ? label.slice(0, 27) + '...' : label;
+        
+        // Size info if available
+        const sizeInfo = s.size ? formatBytes(s.size) : '';
+        const metaParts = [s.messageCount + ' messages'];
+        if (sizeInfo) metaParts.push(sizeInfo);
+        
         return `
           <div class="file-item" onclick="loadLog('${s.id}', ${i})">
             <div class="file-name">${dateStr}</div>
-            <div class="file-meta">${s.messageCount} messages • ${formatBytes(s.size)}</div>
+            <div class="file-meta" title="${label}">${metaParts.join(' • ')}</div>
           </div>
         `;
       }).join('');
+      
+      document.getElementById('logs-count').textContent = nonEmpty.length;
     }
     
     function renderUsage(data) {
@@ -1433,19 +1462,42 @@
       
       container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading...</div>';
       
-      const data = await fetchJSON(`api/session-${sessionId}.json`);
-      if (!data || !data.messages) {
+      // URL-encode the session ID in case it has special chars like colons
+      const data = await fetchJSON(`api/session-${encodeURIComponent(sessionId)}.json`);
+      if (!data) {
         container.innerHTML = '<div class="empty-state">Failed to load session</div>';
         return;
       }
       
-      currentLogData = data;
+      // Handle both formats - messages array or direct message list
+      const messages = data.messages || [];
+      if (messages.length === 0) {
+        container.innerHTML = '<div class="empty-state">No messages in this session</div>';
+        return;
+      }
+      
+      // Filter to only user/assistant messages with text
+      const filteredMessages = messages.filter(m => 
+        (m.role === 'user' || m.role === 'assistant') && 
+        m.text && 
+        m.text.trim() && 
+        m.text !== 'NO_REPLY' &&
+        !m.text.startsWith('{')
+      );
+      
+      currentLogData = { ...data, messages: filteredMessages };
       document.getElementById('logs-search').value = '';
       
-      const date = data.lastMessage ? new Date(data.lastMessage) : new Date(data.modified * 1000);
-      titleEl.textContent = date.toLocaleDateString() + ' (' + data.messageCount + ' messages)';
+      // Build title from available date info
+      let dateStr = 'Session';
+      if (data.lastMessage) {
+        dateStr = new Date(data.lastMessage).toLocaleDateString();
+      } else if (data.lastActiveAt) {
+        dateStr = new Date(data.lastActiveAt).toLocaleDateString();
+      }
+      titleEl.textContent = dateStr + ' (' + filteredMessages.length + ' messages)';
       
-      renderLogMessages(data.messages);
+      renderLogMessages(filteredMessages);
     }
     
     function renderSystemInfo(data) {
